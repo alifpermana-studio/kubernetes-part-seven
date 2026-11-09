@@ -1,0 +1,38 @@
+00:00.080 --> 00:03.420
+Jebakan kedua yang dilakukan 80% developer adalah
+
+00:03.420 --> 00:07.660
+salah memasang liveness probe pada aplikasi berat seperti Ollama atau backend.
+
+00:08.380 --> 00:10.040
+Ingat analoginya:
+
+00:10.420 --> 00:13.780
+liveness probe itu mengecek apakah koki masih bernapas,
+
+00:13.880 --> 00:17.700
+sedangkan readiness probe mengecek apakah koki sedang sibuk memasak.
+
+00:18.720 --> 00:21.820
+Kalau kamu pasang liveness probe dengan waktu tunggu pendek,
+
+00:21.880 --> 00:26.060
+maka saat pod sedang sibuk memproses beban 100% CPU dan telat membalas panggilan,
+
+00:26.460 --> 00:28.480
+Kubernetes mengira koki itu sudah mati,
+
+00:28.480 --> 00:32.860
+lalu menembak mati pod yang sebenarnya sedang bekerja keras menyelesaikan pesanan pelanggan.
+
+00:33.480 --> 00:37.660
+Solusinya, gunakan startup probe untuk memberi waktu muat model AI di awal.
+
+00:37.940 --> 00:41.960
+Gunakan readiness probe untuk menahan kiriman traffic baru saat pod sedang sibuk,
+
+00:41.960 --> 00:44.180
+dan buat liveness probe sangat longgar,
+
+00:44.240 --> 00:46.880
+khusus untuk mendeteksi aplikasi yang macet permanen.

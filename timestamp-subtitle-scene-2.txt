@@ -1,0 +1,32 @@
+00:00.560 --> 00:05.350
+Bencana paling mengerikan di produksi adalah efek domino, alias cascading failure.
+
+00:06.400 --> 00:11.200
+Bayangkan, ada 3 meja koki (pod) yang sedang melayani pelanggan di batas maksimal.
+
+00:12.050 --> 00:17.200
+Tiba-tiba, pod pertama meledak terkena OOMKilled karena menerima satu request ekstra berat.
+
+00:18.000 --> 00:23.850
+Detik itu juga, operator service langsung memindahkan seluruh pesanan milik pod pertama tadi ke dua pod yang tersisa.
+
+00:24.700 --> 00:25.800
+Akibatnya apa?
+
+00:26.300 --> 00:30.900
+Dalam 3 detik berikutnya, pod kedua dan ketiga langsung kelebihan beban dan ikut meledak berjamaah.
+
+00:31.450 --> 00:35.150
+Sementara pod bantuan dari HPA masih butuh 30 detik untuk menyala.
+
+00:36.400 --> 00:40.200
+Cara menghentikan efek domino ini adalah memasang pembatas konkurensi di aplikasi,
+
+00:40.400 --> 00:42.200
+menahan luapan trafik dengan antrean,
+
+00:42.400 --> 00:43.950
+memasang circuit breaker,
+
+00:44.000 --> 00:47.300
+serta mengunci jumlah minimal pod aktif lewat Pod Disruption Budget.

@@ -1,0 +1,35 @@
+00:00.620 --> 00:03.950
+Kenapa pelanggan masih sering kena error 502 Bad Gateway
+
+00:03.950 --> 00:06.850
+selama beberapa detik saat kamu melakukan rolling update aplikasi?
+
+00:07.300 --> 00:09.650
+Padahal katanya Kubernetes itu zero downtime.
+
+00:10.150 --> 00:13.150
+Penyebabnya adalah balapan waktu antara sinyal kematian SIGTERM
+
+00:13.150 --> 00:15.550
+dan pembaruan tabel rute kube-proxy.
+
+00:16.200 --> 00:18.000
+Saat pod lama hendak dimatikan,
+
+00:18.000 --> 00:20.550
+Kubernetes mengirim sinyal SIGTERM ke aplikasi
+
+00:20.550 --> 00:23.450
+bersamaan dengan perintah menghapus IP pod dari daftar service.
+
+00:24.400 --> 00:29.850
+Masalahnya, kube-proxy butuh waktu 1 sampai 3 detik untuk memperbarui aturan iptables di semua VPS,
+
+00:30.300 --> 00:34.950
+sehingga masih ada trafik pengunjung yang terlanjur nyelonong masuk ke pod yang sudah menutup pintunya.
+
+00:35.950 --> 00:40.400
+Solusi wajibnya, tambahkan preStop hook berisi perintah sleep 5 detik di YAML pod,
+
+00:40.400 --> 00:44.750
+dan terapkan graceful shutdown agar pod menyelesaikan sisa transaksi sebelum benar-benar mati.

@@ -1,0 +1,35 @@
+00:00.200 --> 00:03.250
+Kalau suatu malam alarm server-mu berbunyi, jangan panik,
+
+00:03.350 --> 00:06.650
+dan jalankan playbook investigasi 5 menit ini secara berurutan.
+
+00:06.850 --> 00:07.950
+Langkah pertama,
+
+00:08.100 --> 00:12.600
+ketik kubectl get pods untuk melihat status horor dan jumlah restart.
+
+00:13.000 --> 00:14.000
+Langkah kedua,
+
+00:14.150 --> 00:18.000
+jalankan kubectl describe pod untuk membaca rekaman kejadian di bagian paling bawah,
+
+00:18.150 --> 00:22.000
+memeriksa apakah ada kode exit 137 atau kegagalan probe.
+
+00:22.700 --> 00:23.800
+Langkah ketiga,
+
+00:23.900 --> 00:27.250
+gunakan kubectl logs dengan flag --previous,
+
+00:27.400 --> 00:31.000
+untuk melihat pesan terakhir yang diteriakkan aplikasimu tepat sebelum ia mati.
+
+00:31.350 --> 00:32.750
+Dan langkah keempat,
+
+00:32.900 --> 00:38.900
+cek kubectl top pod serta node untuk memastikan tidak ada lonjakan memori atau disk VPS yang kepenuhan.

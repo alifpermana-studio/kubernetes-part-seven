@@ -1,0 +1,41 @@
+00:00.600 --> 00:03.350
+Lihat buktinya di simulator Chaos Engineering ini,
+
+00:03.450 --> 00:06.600
+saat kita hantam klaster dengan lonjakan trafik ekstrem.
+
+00:07.350 --> 00:09.150
+Ketika sakelar pelindung dimatikan,
+
+00:09.250 --> 00:11.850
+begitu pod pertama tumbang karena OOMKilled
+
+00:11.950 --> 00:14.300
+atau dibunuh oleh liveness probe yang terlalu galak,
+
+00:14.400 --> 00:16.800
+bebannya langsung menimpa pod kedua dan ketiga,
+
+00:16.900 --> 00:18.850
+hingga seluruh klaster lumpuh total
+
+00:18.950 --> 00:21.350
+dengan pesan 502 Bad Gateway.
+
+00:22.250 --> 00:25.150
+Sekarang perhatikan, saat kita aktifkan sakelar pembatas konkurensi,
+
+00:25.250 --> 00:27.950
+pemisahan readiness probe, dan graceful shutdown.
+
+00:28.200 --> 00:31.050
+Trafik berlebih langsung ditahan dengan tertib di antrean,
+
+00:31.150 --> 00:33.200
+sementara HPA menyalakan pod bantuan
+
+00:33.300 --> 00:35.300
+tanpa ada satu pun pod yang meledak,
+
+00:35.400 --> 00:37.350
+menghasilkan 0% error.

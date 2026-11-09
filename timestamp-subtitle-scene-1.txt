@@ -1,0 +1,29 @@
+00:00.600 --> 00:04.250
+Pernah kebayang nggak? Cuma gara-gara satu Pod mati pada jam 3 pagi,
+
+00:04.250 --> 00:07.550
+tiba-tiba seluruh cluster Kubernetes-mu ikut runtuh berjamaah?
+
+00:08.620 --> 00:12.180
+Di bagian 7 yang menjadi penutup seri Masterclass Kubernetes ini,
+
+00:12.250 --> 00:16.850
+kita bakal bongkar 7 jebakan produksi paling mematikan beserta cara menjinakkannya.
+
+00:17.650 --> 00:20.150
+Pertama, kenali 4 status horor ini:
+
+00:20.450 --> 00:24.750
+Status Pending berarti Pod-mu tertahan di luar gedung karena sisa RAM VPS tidak cukup,
+
+00:24.800 --> 00:27.580
+atau klaim storage nyangkut di server lain.
+
+00:28.120 --> 00:34.650
+Status OOMKilled dengan Exit Code 137, berarti Pod-mu ditembak mati karena melewati batas memori.
+
+00:35.800 --> 00:42.250
+Status CrashLoopBackOff, berarti containermu gagal menyala berulang kali hingga ditunda secara eksponensial sampai 5 menit.
+
+00:43.100 --> 00:49.950
+Dan status Evicted, berarti Kubelet mengusir paksa Pod-mu karena penyimpanan disk VPS sudah penuh di atas 85%.

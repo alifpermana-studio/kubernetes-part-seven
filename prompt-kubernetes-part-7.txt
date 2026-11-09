@@ -1,0 +1,115 @@
+================================================================================
+SPESIFIKASI PRODUKSI VIDEO TIKTOK (FORMAT VERTIKAL 9:16)
+Judul Proyek : 7 Jebakan Mematikan di Kubernetes, Efek Domino, & Playbook Troubleshooting (Part 7 - Penutup)
+Format       : 8 Cut Scenes
+================================================================================
+
+### Cut Scene 1 (alifpermana.studio)
+
+Judul Proyek: 7 Jebakan Mematikan di Kubernetes, Efek Domino, & Playbook Troubleshooting Sebelum Jam 3 Pagi (Bagian 7 dari 7 Seri Masterclass Kubernetes).
+
+Pendekatan Materi: Memadukan Analogi Efek Domino Restoran (Koki Pingsan Berjamaah) dan Analogi Cek Napas vs Cek Kesibukan Koki dengan bedah log diagnostik, race condition sinyal SIGTERM, serta kuota kernel Linux.
+
+Tujuan Komunikasi: Menarik perhatian penonton lewat skenario nyata ketika matinya satu Pod meruntuhkan seluruh klaster, sekaligus membedah 4 status horor Kubernetes (Pending, OOMKilled Exit Code 137, CrashLoopBackOff, dan Evicted).
+
+Spesifikasi Visual: Bagian atas menampilkan layar alarm insiden jam 3 pagi saat satu Pod merah meruntuhkan deretan Pod lain. Bagian bawah menampilkan 4 kartu diagnostik status horor: Pending (tertahan di luar gedung VPS), OOMKilled (Container Limit vs Node Overcommit), CrashLoopBackOff (jeda restart eksponensial 10s, 20s, 40s, hingga 5 menit), dan Evicted (diusir paksa oleh kubelet karena disk VPS penuh di atas 85%).
+
+Teks Layar (Hook): "1 Pod Mati Bikin Seluruh Klaster Runtuh?! Kenali 4 Status Horor Kubernetes Ini!"
+
+---
+
+### Cut Scene 2 (azurewot)
+
+Judul Proyek: 7 Jebakan Mematikan di Kubernetes, Efek Domino, & Playbook Troubleshooting Sebelum Jam 3 Pagi (Bagian 7 dari 7 Seri Masterclass Kubernetes).
+
+Pendekatan Materi: Memadukan Analogi Efek Domino Restoran (Koki Pingsan Berjamaah) dan Analogi Cek Napas vs Cek Kesibukan Koki dengan bedah log diagnostik, race condition sinyal SIGTERM, serta kuota kernel Linux.
+
+Tujuan Komunikasi: Menjelaskan kronologi bencana Efek Domino (Cascading Failure & Thundering Herd) saat trafik berat berpindah dari Pod yang mati ke sisa Pod yang sehat, beserta perisai pencegahannya.
+
+Spesifikasi Visual: Animasi 3 meja koki (Pod) yang sedang melayani pesanan. Saat Pod 1 meledak karena OOMKilled, operator Service langsung memindahkan seluruh pesanan Pod 1 ke Pod 2 dan Pod 3. Akibatnya, Pod 2 dan Pod 3 ikut meledak dalam 3 detik sementara Pod bantuan dari HPA butuh 30 detik untuk menyala. Visual kemudian menampilkan perisai pelindung: Concurrency Limiting, Queueing, Circuit Breaker, dan Pod Disruption Budget (PDB).
+
+Teks Layar: "Awas Efek Domino (Cascading Failure)! Pasang Rate Limit, Queue, & Circuit Breaker"
+
+---
+
+### Cut Scene 3 (azurestudio.backup)
+
+Judul Proyek: 7 Jebakan Mematikan di Kubernetes, Efek Domino, & Playbook Troubleshooting Sebelum Jam 3 Pagi (Bagian 7 dari 7 Seri Masterclass Kubernetes).
+
+Pendekatan Materi: Memadukan Analogi Efek Domino Restoran (Koki Pingsan Berjamaah) dan Analogi Cek Napas vs Cek Kesibukan Koki dengan bedah log diagnostik, race condition sinyal SIGTERM, serta kuota kernel Linux.
+
+Tujuan Komunikasi: Membongkar kesalahan fatal konfigurasi Liveness Probe yang terlalu agresif sehingga membunuh Pod aplikasi berat yang sedang sibuk bekerja, serta cara memisahkannya dari Readiness Probe dan Startup Probe.
+
+Spesifikasi Visual: Ilustrasi koki (Pod Ollama/Backend) yang sedang berkeringat memproses beban 100% CPU selama 10 detik. Petugas Liveness Probe mengetuk pintu dengan timeout pendek; karena koki telat menjawab, petugas langsung menembak mati koki yang sedang memasak pesanan pelanggan. Layar bawah menampilkan pemisahan tugas yang benar: startupProbe (tunggu model AI siap di awal), readinessProbe (tahan trafik baru saat sibuk), dan livenessProbe (khusus deteksi deadlock).
+
+Teks Layar: "Jangan Bunuh Koki yang Sedang Sibuk! Bedakan startupProbe, readinessProbe, & livenessProbe"
+
+---
+
+### Cut Scene 4 (azurestudio.backup1)
+
+Judul Proyek: 7 Jebakan Mematikan di Kubernetes, Efek Domino, & Playbook Troubleshooting Sebelum Jam 3 Pagi (Bagian 7 dari 7 Seri Masterclass Kubernetes).
+
+Pendekatan Materi: Memadukan Analogi Efek Domino Restoran (Koki Pingsan Berjamaah) dan Analogi Cek Napas vs Cek Kesibukan Koki dengan bedah log diagnostik, race condition sinyal SIGTERM, serta kuota kernel Linux.
+
+Tujuan Komunikasi: Menunjukkan bukti interaktif melalui Simulator Chaos Engineering HTML tentang perbandingan klaster tanpa pelindung yang runtuh beruntun melawan klaster berpengaman lengkap yang bertahan dengan 0% error.
+
+Spesifikasi Visual: Rekaman layar vertikal dari aplikasi simulasi HTML "Simulator Chaos Engineering". Saat ketiga sakelar pelindung dimatikan dan tombol "Picu Lonjakan Trafik Ekstrem & Chaos Test" ditekan, Pod 1 mati ditembak Liveness Probe/OOMKilled lalu menularkan beban ke Pod 2 dan 3 hingga muncul layar merah 502 Bad Gateway. Saat sakelar Pembatas Konkurensi, Pemisahan Probe, dan preStop Hook diaktifkan, seluruh trafik tertahan rapi dan dilayani dengan 0% Error Rate.
+
+Teks Layar: "Simulasi Chaos Engineering: Runtuh Berjamaah (502 Error) vs Perisai Produksi (0% Error)!"
+
+---
+
+### Cut Scene 5 (azurestudio.backup2)
+
+Judul Proyek: 7 Jebakan Mematikan di Kubernetes, Efek Domino, & Playbook Troubleshooting Sebelum Jam 3 Pagi (Bagian 7 dari 7 Seri Masterclass Kubernetes).
+
+Pendekatan Materi: Memadukan Analogi Efek Domino Restoran (Koki Pingsan Berjamaah) dan Analogi Cek Napas vs Cek Kesibukan Koki dengan bedah log diagnostik, race condition sinyal SIGTERM, serta kuota kernel Linux.
+
+Tujuan Komunikasi: Mengungkap dua jebakan tersembunyi penyebab aplikasi lambat di Kubernetes: CPU Throttling akibat limits.cpu yang terlalu sempit dan misteri ndots:5 pada pencarian DNS eksternal di CoreDNS.
+
+Spesifikasi Visual: Layar atas menampilkan grafik CPU VPS yang masih santai di 20%, namun aplikasi multi-thread di dalam Pod berjalan lambat karena tercekik kuota CFS 100ms dari limits.cpu yang sempit. Layar bawah menampilkan paket request ke api.midtrans.com atau api.openai.com yang terpaksa melakukan 4 kali pencarian DNS lokal palsu yang gagal di dalam klaster akibat aturan bawaan ndots:5 sebelum akhirnya keluar ke internet.
+
+Teks Layar: "2 Biang Kerok Aplikasi Lambat: Jebakan limits.cpu (CFS Throttling) & Misteri ndots:5 CoreDNS!"
+
+---
+
+### Cut Scene 6 (alifpustaka.assist)
+
+Judul Proyek: 7 Jebakan Mematikan di Kubernetes, Efek Domino, & Playbook Troubleshooting Sebelum Jam 3 Pagi (Bagian 7 dari 7 Seri Masterclass Kubernetes).
+
+Pendekatan Materi: Memadukan Analogi Efek Domino Restoran (Koki Pingsan Berjamaah) dan Analogi Cek Napas vs Cek Kesibukan Koki dengan bedah log diagnostik, race condition sinyal SIGTERM, serta kuota kernel Linux.
+
+Tujuan Komunikasi: Menjelaskan penyebab munculnya error 502 Bad Gateway sesaat ketika melakukan Rolling Update atau scale-down (bencana Zero-Downtime palsu) akibat balapan waktu antara sinyal SIGTERM dan pembaruan iptables kube-proxy.
+
+Spesifikasi Visual: Diagram sekuens balapan waktu (race condition) saat Pod lama dimatikan: sinyal SIGTERM langsung menutup aplikasi di detik ke-0, padahal kube-proxy butuh waktu 1–3 detik untuk mencabut IP Pod dari aturan iptables, sehingga trafik pelanggan yang telanjur masuk menabrak pintu yang sudah tutup (Error 502). Di bawahnya muncul solusi kode YAML lifecycle.preStop (sleep 5) dan penanganan Graceful Shutdown di kode Backend.
+
+Teks Layar: "Masih Kena Error 502 Saat Update Aplikasi? Atasi Balapan SIGTERM dengan preStop Hook (sleep 5)!"
+
+---
+
+### Cut Scene 7 (fajarrini915)
+
+Judul Proyek: 7 Jebakan Mematikan di Kubernetes, Efek Domino, & Playbook Troubleshooting Sebelum Jam 3 Pagi (Bagian 7 dari 7 Seri Masterclass Kubernetes).
+
+Pendekatan Materi: Memadukan Analogi Efek Domino Restoran (Koki Pingsan Berjamaah) dan Analogi Cek Napas vs Cek Kesibukan Koki dengan bedah log diagnostik, race condition sinyal SIGTERM, serta kuota kernel Linux.
+
+Tujuan Komunikasi: Memberikan alur Playbook Investigasi Insiden 5 Menit menggunakan perintah kubectl secara berurutan agar developer tidak panik saat menghadapi masalah produksi.
+
+Spesifikasi Visual: Bagan alur vertikal (Troubleshooting Decision Tree) yang menampilkan urutan perintah terminal: 1. kubectl get pods (cek status & jumlah restart), 2. kubectl describe pod (cek Events, kode exit 137/1, & kegagalan probe), 3. kubectl logs --previous (baca pesan terakhir sebelum kontainer mati), dan 4. kubectl top pod/node (cek tekanan memori, CPU throttling, & disk VPS).
+
+Teks Layar: "Playbook Investigasi 5 Menit: get pods -> describe pod -> logs --previous -> top node"
+
+---
+
+### Cut Scene 8 (ruhwiyanto278)
+
+Judul Proyek: 7 Jebakan Mematikan di Kubernetes, Efek Domino, & Playbook Troubleshooting Sebelum Jam 3 Pagi (Bagian 7 dari 7 Seri Masterclass Kubernetes).
+
+Pendekatan Materi: Memadukan Analogi Efek Domino Restoran (Koki Pingsan Berjamaah) dan Analogi Cek Napas vs Cek Kesibukan Koki dengan bedah log diagnostik, race condition sinyal SIGTERM, serta kuota kernel Linux.
+
+Tujuan Komunikasi: Menutup keseluruhan 7 bagian Seri Masterclass Kubernetes dengan merangkum perjalanan belajar dari nol hingga siap mengelola klaster produksi yang tangguh.
+
+Spesifikasi Visual: Montase sinematik yang menyatukan ketujuh bagian Seri Masterclass Kubernetes: dari paradigma Gedung Restoran (Part 1), Pajak RAM & Isolasi Pod (Part 2), Autoscaling HPA & KEDA (Part 3), Jaringan Multi-VPS & Shared Storage (Part 4), Studi Kasus AI Semantic Search (Part 5), Profiling Kapasitas & QoS (Part 6), hingga Pertahanan Insiden Produksi (Part 7).
+
+Teks Layar: "Tamat! Selamat, Kamu Telah Menyelesaikan 7 Bagian Seri Masterclass Kubernetes!"

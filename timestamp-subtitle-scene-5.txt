@@ -1,0 +1,35 @@
+00:00.670 --> 00:03.350
+Pernah mengalami aplikasi terasa sangat lambat,
+
+00:03.350 --> 00:07.480
+padahal total penggunaan CPU di VPS masih santai di angka 20%?
+
+00:08.300 --> 00:10.500
+Itu adalah jebakan CPU throttling.
+
+00:11.450 --> 00:14.200
+Kalau kamu memasang batas limits.cpu terlalu sempit
+
+00:14.200 --> 00:17.550
+pada aplikasi multithread seperti Node.js, Go, atau Python,
+
+00:17.550 --> 00:21.400
+kernel Linux akan mengerem paksa prosesmu setiap 100 milidetik.
+
+00:22.050 --> 00:24.700
+Sehingga banyak pakar menyarankan cukup memasang requests.cpu yang tepat
+
+00:24.700 --> 00:27.350
+dan melonggarkan limits.cpu.
+
+00:28.400 --> 00:33.200
+Jebakan tersembunyi lainnya adalah aturan bawaan ndots:5 di CoreDNS.
+
+00:33.700 --> 00:37.450
+Setiap kali Pod memanggil API eksternal seperti Midtrans atau OpenAI,
+
+00:37.450 --> 00:43.000
+Kubernetes diam-diam melakukan 4 kali pencarian DNS palsu yang gagal di dalam cluster sebelum keluar ke internet.
+
+00:43.600 --> 00:48.000
+Yang bisa kamu hemat dengan menambahkan titik di akhir domain atau mengatur DNS config.

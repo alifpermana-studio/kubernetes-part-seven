@@ -1,0 +1,37 @@
+================================================================================
+NASKAH SUBTITLE & VOICEOVER TIKTOK (FORMAT VERTIKAL 9:16)
+Judul Proyek : 7 Jebakan Mematikan di Kubernetes, Efek Domino, & Playbook Troubleshooting (Part 7 - Penutup)
+Format       : 8 Cut Scenes
+================================================================================
+
+[CUT SCENE 1: HOOK — KETIKA 1 POD MATI MERUNTUHKAN SELURUH KLASTER & 4 STATUS HOROR]
+--------------------------------------------------------------------------------
+Pernah kebayang nggak, cuma gara-gara satu Pod mati pada jam tiga pagi, tiba-tiba seluruh klaster Kubernetes-mu ikut runtuh berjamaah? Di Bagian 7 yang menjadi penutup Seri Masterclass Kubernetes ini, kita bakal bongkar tujuh jebakan produksi paling mematikan beserta cara menjinakkannya! Pertama, kenali empat status horor ini: status Pending berarti Pod-mu tertahan di luar gedung karena sisa RAM VPS tidak cukup atau klaim storage nyangkut di server lain. Status OOMKilled dengan Exit Code 137 berarti Pod-mu ditembak mati karena melewati batas memori. Status CrashLoopBackOff berarti kontainermu gagal menyala berulang kali hingga ditunda secara eksponensial sampai lima menit. Dan status Evicted berarti kubelet mengusir paksa Pod-mu karena penyimpanan disk VPS sudah penuh di atas delapan puluh lima persen!
+
+[CUT SCENE 2: JEBAKAN EFEK DOMINO (CASCADING FAILURE) SAAT TRAFIK BERAT DATANG]
+--------------------------------------------------------------------------------
+Bencana paling mengerikan di produksi adalah Efek Domino alias Cascading Failure! Bayangkan ada tiga meja koki Pod yang sedang melayani pelanggan di batas maksimal. Tiba-tiba Pod pertama meledak terkena OOMKilled karena menerima satu request ekstra berat. Detik itu juga, operator Service langsung memindahkan seluruh pesanan milik Pod pertama tadi ke dua Pod yang tersisa! Akibatnya apa? Dalam tiga detik berikutnya, Pod kedua dan ketiga langsung kelebihan beban dan ikut meledak berjamaah, sementara Pod bantuan dari HPA masih butuh tiga puluh detik untuk menyala! Cara menghentikan efek domino ini adalah memasang pembatas konkurensi di aplikasi, menahan luapan trafik dengan antrean, memasang Circuit Breaker, serta mengunci jumlah minimal Pod aktif lewat Pod Disruption Budget!
+
+[CUT SCENE 3: JEBAKAN LIVENESS PROBE VS READINESS PROBE YANG SALAH KONFIGURASI]
+--------------------------------------------------------------------------------
+Jebakan kedua yang dilakukan delapan puluh persen developer adalah salah memasang Liveness Probe pada aplikasi berat seperti Ollama atau Backend! Ingat analoginya: Liveness Probe itu mengecek apakah koki masih bernapas, sedangkan Readiness Probe mengecek apakah koki sedang sibuk memasak. Kalau kamu pasang Liveness Probe dengan waktu tunggu pendek, maka saat Pod sedang sibuk memproses beban seratus persen CPU dan telat membalas panggilan, Kubernetes mengira koki itu sudah mati lalu menembak mati Pod yang sebenarnya sedang bekerja keras menyelesaikan pesanan pelanggan! Solusinya: gunakan Startup Probe untuk memberi waktu muat model AI di awal, gunakan Readiness Probe untuk menahan kiriman trafik baru saat Pod sedang sibuk, dan buat Liveness Probe sangat longgar khusus untuk mendeteksi aplikasi yang macet permanen!
+
+[CUT SCENE 4: DEMO VISUAL — SIMULATOR CHAOS ENGINEERING & PERISAI PRODUKSI]
+--------------------------------------------------------------------------------
+Lihat buktinya di Simulator Chaos Engineering ini saat kita hantam klaster dengan lonjakan trafik ekstrem! Ketika sakelar pelindung dimatikan, begitu Pod pertama tumbang karena OOMKilled atau dibunuh oleh Liveness Probe yang terlalu galak, bebannya langsung menimpa Pod kedua dan ketiga hingga seluruh klaster lumpuh total dengan pesan 502 Bad Gateway! Sekarang perhatikan saat kita aktifkan sakelar pembatas konkurensi, pemisahan Readiness Probe, dan Graceful Shutdown: trafik berlebih langsung ditahan dengan tertib di antrean sementara HPA menyalakan Pod bantuan tanpa ada satu pun Pod yang meledak, menghasilkan nol persen error!
+
+[CUT SCENE 5: MISTERI CPU THROTTLING & JEBAKAN NDOTS:5 PADA COREDNS]
+--------------------------------------------------------------------------------
+Pernah mengalami aplikasi terasa sangat lambat padahal total penggunaan CPU di VPS masih santai di angka dua puluh persen? Itu adalah jebakan CPU Throttling! Kalau kamu memasang batas limits.cpu terlalu sempit pada aplikasi multi-thread seperti Node.js, Go, atau Python, kernel Linux akan mengerem paksa prosesmu setiap seratus milidetik, sehingga banyak pakar menyarankan cukup memasang requests.cpu yang tepat dan melonggarkan limits.cpu! Jebakan tersembunyi lainnya adalah aturan bawaan ndots:5 di CoreDNS: setiap kali Pod memanggil API eksternal seperti Midtrans atau OpenAI, Kubernetes diam-diam melakukan empat kali pencarian DNS palsu yang gagal di dalam klaster sebelum keluar ke internet, yang bisa kamu hemat dengan menambahkan titik di akhir domain atau mengatur dnsConfig!
+
+[CUT SCENE 6: BENCANA ZERO-DOWNTIME PALSU — MENGAPA MASIH ERROR 502 SAAT UPDATE?]
+--------------------------------------------------------------------------------
+Kenapa pelanggan masih sering kena error 502 Bad Gateway selama beberapa detik saat kamu melakukan Rolling Update aplikasi, padahal katanya Kubernetes itu Zero-Downtime? Penyebabnya adalah balapan waktu antara sinyal kematian SIGTERM dan pembaruan tabel rute kube-proxy! Saat Pod lama hendak dimatikan, Kubernetes mengirim sinyal SIGTERM ke aplikasi bersamaan dengan perintah menghapus IP Pod dari daftar Service. Masalahnya, kube-proxy butuh waktu satu sampai tiga detik untuk memperbarui aturan iptables di semua VPS, sehingga masih ada trafik pengunjung yang telanjur nyelonong masuk ke Pod yang sudah menutup pintunya! Solusi wajibnya: tambahkan preStop hook berisi perintah sleep lima detik di YAML Pod dan terapkan Graceful Shutdown agar Pod menyelesaikan sisa transaksi sebelum benar-benar mati!
+
+[CUT SCENE 7: PLAYBOOK INVESTIGASI INSIDEN 5 MENIT DI TERMINAL]
+--------------------------------------------------------------------------------
+Kalau suatu malam alarm servermu berbunyi, jangan panik dan jalankan Playbook Investigasi Lima Menit ini secara berurutan! Langkah pertama, ketik kubectl get pods untuk melihat status horor dan jumlah restart. Langkah kedua, jalankan kubectl describe pod untuk membaca rekaman kejadian di bagian paling bawah, memeriksa apakah ada kode exit 137 atau kegagalan probe. Langkah ketiga, gunakan kubectl logs dengan flag --previous untuk melihat pesan terakhir yang diteriakkan aplikasimu tepat sebelum ia mati. Dan langkah keempat, cek kubectl top pod serta node untuk memastikan tidak ada lonjakan memori atau disk VPS yang kepenuhan!
+
+[CUT SCENE 8: PENUTUP AKBAR SERI MASTERCLASS KUBERNETES (BAGIAN 1–7)]
+--------------------------------------------------------------------------------
+Selamat! Kamu telah menamatkan seluruh tujuh bagian dari Seri Masterclass Kubernetes! Dari memahami filosofi dasar Gedung Restoran di Bagian 1, menghitung pajak RAM VPS dan isolasi memori di Bagian 2, menguasai karet gelang HPA serta antrean KEDA di Bagian 3, menyambungkan jembatan jaringan multi-VPS dan berbagi storage 40 GB di Bagian 4, merancang studi kasus aplikasi AI Semantic Search di Bagian 5, melakukan profiling kapasitas ilmiah di Bagian 6, hingga menjinakkan jebakan produksi di Bagian 7 ini! Simpan seluruh seri ini sebagai senjata andalanmu membangun infrastruktur berkelas dunia, dan sampai jumpa di seri rekayasa sistem berikutnya!
