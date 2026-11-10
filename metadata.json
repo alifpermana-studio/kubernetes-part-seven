@@ -1,0 +1,5 @@
+{
+  "name": "Masterclass Kubernetes Bagian 7 — 7 Jebakan Mematikan di Kubernetes, Efek Domino, & Playbook Troubleshooting",
+  "description": "Memadukan Analogi Efek Domino Restoran (Koki Pingsan Berjamaah) dan Analogi Cek Napas vs Cek Kesibukan Koki dengan bedah log diagnostik, race condition sinyal SIGTERM, serta kuota kernel Linux.",
+  "requestFramePermissions": []
+}
