@@ -24,7 +24,11 @@ input[type=range]{flex:1;min-width:120px;accent-color:#4667FF}label{color:#A3A5F
 <div class="r"><label><input type="checkbox" id="cV" checked>Narasi</label><label><input type="checkbox" id="cS" checked>Efek</label><label><input type="checkbox" id="cC" checked>Subtitle</label>
 <button class="g" id="sr">SRT</button><button id="ex">Download Video (MP4)</button></div>
 <div id="st">Menyiapkan audio seluruh scene…</div></div>
-<script src="https://cdn.jsdelivr.net/npm/mediabunny@1.25.0/dist/bundles/mediabunny.min.cjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+<script type="module">
+import * as M from 'https://cdn.jsdelivr.net/npm/mediabunny@1.25.0/dist/bundles/mediabunny.min.mjs';
+window.Mediabunny = M;
+</script>
 <script>
 const cv = document.getElementById('cv'), g = cv.getContext('2d');
 const $ = id => document.getElementById(id), cV = $('cV'), cS = $('cS'), cC = $('cC'), st = $('st');
@@ -4169,31 +4173,119 @@ $('sr').onclick = () => {
   dl(new Blob([cues.map((c, i) => (i + 1) + '\n' + f(c[0]) + ' --> ' + f(c[1]) + '\n' + c[2] + '\n').join('\n')], { type: 'text/plain' }), 'kubernetes-part-7-full.srt');
 };
 
+async function ensureMediabunny() {
+  if (window.Mediabunny) return window.Mediabunny;
+  try {
+    const mod = await import('https://cdn.jsdelivr.net/npm/mediabunny@1.25.0/dist/bundles/mediabunny.min.mjs');
+    if (mod && mod.Output) {
+      window.Mediabunny = mod;
+      return mod;
+    }
+  } catch (e) {
+    console.warn('ESM import Mediabunny fallback:', e);
+  }
+  try {
+    const r = await fetch('https://cdn.jsdelivr.net/npm/mediabunny@1.25.0/dist/bundles/mediabunny.min.cjs');
+    const code = await r.text();
+    const m = { exports: {} };
+    new Function('module', 'exports', code)(m, m.exports);
+    if (m.exports && m.exports.Output) {
+      window.Mediabunny = m.exports;
+      return m.exports;
+    }
+  } catch (e) {
+    console.warn('Fetch eval Mediabunny fallback:', e);
+  }
+  return null;
+}
+
+function patchMp4Duration(ab, durSec) {
+  try {
+    const dv = new DataView(ab);
+    const len = dv.byteLength;
+    const containers = new Set(['moov', 'trak', 'mdia', 'mvex']);
+    let lastTimescale = 1000;
+    function walk(start, end) {
+      let pos = start;
+      while (pos + 8 <= end) {
+        let sz = dv.getUint32(pos);
+        const tp = String.fromCharCode(dv.getUint8(pos + 4), dv.getUint8(pos + 5), dv.getUint8(pos + 6), dv.getUint8(pos + 7));
+        let hdr = 8;
+        if (sz === 1) {
+          if (pos + 16 > end) break;
+          sz = Number(dv.getBigUint64(pos + 8));
+          hdr = 16;
+        } else if (sz === 0) {
+          sz = end - pos;
+        }
+        if (sz < hdr || pos + sz > end) break;
+        const body = pos + hdr;
+        if (containers.has(tp)) {
+          walk(body, pos + sz);
+        } else if (tp === 'mvhd' || tp === 'mdhd') {
+          const ver = dv.getUint8(body);
+          if (ver === 1 && body + 36 <= pos + sz) {
+            const ts = dv.getUint32(body + 20) || 1000;
+            if (tp === 'mvhd') lastTimescale = ts;
+            const cur = Number(dv.getBigUint64(body + 24));
+            if (cur === 0) dv.setBigUint64(body + 24, BigInt(Math.round(durSec * ts)));
+          } else if (ver === 0 && body + 24 <= pos + sz) {
+            const ts = dv.getUint32(body + 12) || 1000;
+            if (tp === 'mvhd') lastTimescale = ts;
+            const cur = dv.getUint32(body + 16);
+            if (cur === 0) dv.setUint32(body + 16, Math.round(durSec * ts));
+          }
+        } else if (tp === 'tkhd') {
+          const ver = dv.getUint8(body);
+          if (ver === 1 && body + 36 <= pos + sz) {
+            const cur = Number(dv.getBigUint64(body + 28));
+            if (cur === 0) dv.setBigUint64(body + 28, BigInt(Math.round(durSec * lastTimescale)));
+          } else if (ver === 0 && body + 24 <= pos + sz) {
+            const cur = dv.getUint32(body + 20);
+            if (cur === 0) dv.setUint32(body + 20, Math.round(durSec * lastTimescale));
+          }
+        } else if (tp === 'mehd') {
+          const ver = dv.getUint8(body);
+          if (ver === 1 && body + 12 <= pos + sz) {
+            const cur = Number(dv.getBigUint64(body + 4));
+            if (cur === 0) dv.setBigUint64(body + 4, BigInt(Math.round(durSec * lastTimescale)));
+          } else if (ver === 0 && body + 8 <= pos + sz) {
+            const cur = dv.getUint32(body + 4);
+            if (cur === 0) dv.setUint32(body + 4, Math.round(durSec * lastTimescale));
+          }
+        }
+        pos += sz;
+      }
+    }
+    walk(0, len);
+  } catch (e) {
+    console.warn('patchMp4Duration warning:', e);
+  }
+  return ab;
+}
+
 $('ex').onclick = async () => {
   if (!sb || exporting) { st.textContent = 'Audio sedang disiapkan, mohon tunggu sebentar…'; return; }
   pause();
-  let M = window.Mediabunny;
-  if (!M) {
-    try {
-      st.textContent = 'Memuat encoder MP4 (Mediabunny)…';
-      await new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/mediabunny@1.25.0/dist/bundles/mediabunny.min.cjs';
-        s.onload = resolve;
-        s.onerror = reject;
-        document.head.appendChild(s);
-      });
-      M = window.Mediabunny;
-    } catch (e) {
-      console.warn('Failed to dynamically load Mediabunny:', e);
-    }
-  }
-  if (M && window.VideoEncoder) {
+  st.textContent = 'Memuat modul encoder MP4 (FastStart & Seekable)…';
+  const M = await ensureMediabunny();
+  const totalFrames = Math.round(TOTAL_DUR * FPS);
+  const exactDur = totalFrames / FPS;
+
+  if (window.VideoEncoder) {
     exporting = true;
     $('ex').disabled = true;
     try {
-      const sr = 44100, totalFrames = Math.round(TOTAL_DUR * FPS);
-      const exactDur = totalFrames / FPS;
+      let sr = 48000;
+      let aacSupported = false;
+      if (window.AudioEncoder) {
+        for (const candidateSr of [48000, 44100]) {
+          try {
+            const sup = await AudioEncoder.isConfigSupported({ codec: 'mp4a.40.2', sampleRate: candidateSr, numberOfChannels: 2, bitrate: 128000 });
+            if (sup && sup.supported) { sr = candidateSr; aacSupported = true; break; }
+          } catch (e) {}
+        }
+      }
       const oc = new OfflineAudioContext(2, Math.ceil(sr * exactDur), sr);
       [[fullVoBuf, cV.checked ? 1.0 : 0], [sb, cS.checked ? 1.0 : 0]].forEach(([b, v]) => {
         if (!b || v <= 0) return;
@@ -4203,44 +4295,125 @@ $('ex').onclick = async () => {
         s.start(0);
       });
       const mixedAudio = await oc.startRendering();
-      const mp4Fmt = new M.Mp4OutputFormat({ fastStart: 'in-memory' });
-      const vc = (await M.getFirstEncodableVideoCodec(mp4Fmt.getSupportedVideoCodecs(), { width: W, height: H })) || 'avc';
-      const out = new M.Output({ format: mp4Fmt, target: new M.BufferTarget() });
-      const vs = new M.CanvasSource(cv, { codec: vc, bitrate: M.QUALITY_HIGH, keyFrameInterval: 1 });
-      out.addVideoTrack(vs, { frameRate: FPS });
-      let as = null;
-      if (window.AudioEncoder) {
-        const acd = await M.getFirstEncodableAudioCodec(mp4Fmt.getSupportedAudioCodecs(), { numberOfChannels: 2, sampleRate: sr });
-        if (acd) {
-          as = new M.AudioBufferSource({ codec: acd, bitrate: acd.startsWith('pcm') ? undefined : 192e3 });
-          out.addAudioTrack(as);
+
+      let bestAvc = null;
+      const avcCandidates = ['avc1.640028', 'avc1.64002a', 'avc1.4d0028', 'avc1.4d002a', 'avc1.42E028', 'avc1.420028', 'avc1.42E02a', 'avc1.42002a', 'avc1.42E01E'];
+      for (const c of avcCandidates) {
+        try {
+          const sup = await VideoEncoder.isConfigSupported({ codec: c, width: W, height: H, bitrate: 6000000, framerate: FPS });
+          if (sup && sup.supported) { bestAvc = c; break; }
+        } catch (e) {}
+      }
+
+      if (M) {
+        const mp4Fmt = new M.Mp4OutputFormat({ fastStart: 'in-memory' });
+        const vc = bestAvc ? 'avc' : ((await M.getFirstEncodableVideoCodec(mp4Fmt.getSupportedVideoCodecs(), { width: W, height: H })) || 'avc');
+        const out = new M.Output({ format: mp4Fmt, target: new M.BufferTarget() });
+        const vsOpts = { codec: vc, bitrate: M.QUALITY_HIGH, keyFrameInterval: 1 };
+        if (bestAvc && vc === 'avc') vsOpts.fullCodecString = bestAvc;
+        const vs = new M.CanvasSource(cv, vsOpts);
+        out.addVideoTrack(vs, { frameRate: FPS });
+        let as = null;
+        if (window.AudioEncoder) {
+          const acd = aacSupported ? 'aac' : (await M.getFirstEncodableAudioCodec(mp4Fmt.getSupportedAudioCodecs(), { numberOfChannels: 2, sampleRate: sr }));
+          if (acd) {
+            as = new M.AudioBufferSource({ codec: acd, bitrate: acd.startsWith('pcm') ? undefined : 128000 });
+            out.addAudioTrack(as);
+          }
         }
-      }
-      await out.start();
-      if (as) {
-        await as.add(mixedAudio);
-        as.close();
-      }
-      for (let i = 0; i < totalFrames; i++) {
-        renderMaster(i / FPS);
-        await vs.add(i / FPS, 1 / FPS);
-        if (i % 15 === 0) {
-          st.textContent = 'Mengekspor MP4 (1080×1920 30 FPS · FastStart & Seekable): ' + Math.round((i / totalFrames) * 100) + '%…';
-          await new Promise(r => setTimeout(r, 0));
+        await out.start();
+        if (as) {
+          await as.add(mixedAudio);
+          as.close();
         }
+        for (let i = 0; i < totalFrames; i++) {
+          renderMaster(i / FPS);
+          await vs.add(i / FPS, 1 / FPS);
+          if (i % 15 === 0) {
+            st.textContent = 'Mengekspor MP4 (1080×1920 30 FPS · FastStart & Seekable): ' + Math.round((i / totalFrames) * 100) + '%…';
+            await new Promise(r => setTimeout(r, 0));
+          }
+        }
+        vs.close();
+        st.textContent = 'Menyusun tabel indeks durasi & seekbar MP4 (moov fastStart)…';
+        await new Promise(r => setTimeout(r, 0));
+        await out.finalize();
+        renderMaster(off);
+        const patched = patchMp4Duration(out.target.buffer, exactDur);
+        const a = dl(new Blob([patched], { type: 'video/mp4' }), 'kubernetes-part-7-full.mp4');
+        st.innerHTML = 'Selesai (MP4 1080×1920 30 FPS · Durasi ' + fmt(exactDur) + ' · Seekable). <a href="' + a.href + '" download="kubernetes-part-7-full.mp4">Klik di sini jika belum terunduh</a>.';
+        exporting = false;
+        $('ex').disabled = false;
+        return;
+      } else if (window.Mp4Muxer && bestAvc) {
+        const target = new window.Mp4Muxer.ArrayBufferTarget();
+        const muxer = new window.Mp4Muxer.Muxer({
+          target,
+          video: { codec: 'avc', width: W, height: H, frameRate: FPS },
+          audio: aacSupported ? { codec: 'aac', numberOfChannels: 2, sampleRate: sr } : undefined,
+          fastStart: 'in-memory',
+          firstTimestampBehavior: 'offset'
+        });
+        const vEnc = new VideoEncoder({
+          output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+          error: e => console.error('VideoEncoder error:', e)
+        });
+        vEnc.configure({ codec: bestAvc, width: W, height: H, bitrate: 6000000, framerate: FPS });
+
+        if (aacSupported && window.AudioEncoder && window.AudioData) {
+          const aEnc = new AudioEncoder({
+            output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+            error: e => console.error('AudioEncoder error:', e)
+          });
+          aEnc.configure({ codec: 'mp4a.40.2', numberOfChannels: 2, sampleRate: sr, bitrate: 128000 });
+          const ch0 = mixedAudio.getChannelData(0), ch1 = mixedAudio.getChannelData(1);
+          const step = 1024 * 4;
+          for (let offset = 0; offset < ch0.length; offset += step) {
+            const frames = Math.min(step, ch0.length - offset);
+            const planar = new Float32Array(frames * 2);
+            planar.set(ch0.subarray(offset, offset + frames), 0);
+            planar.set(ch1.subarray(offset, offset + frames), frames);
+            const ad = new AudioData({
+              format: 'f32-planar',
+              sampleRate: sr,
+              numberOfFrames: frames,
+              numberOfChannels: 2,
+              timestamp: Math.round((offset / sr) * 1e6),
+              data: planar
+            });
+            aEnc.encode(ad);
+            ad.close();
+          }
+          await aEnc.flush();
+          aEnc.close();
+        }
+
+        for (let i = 0; i < totalFrames; i++) {
+          renderMaster(i / FPS);
+          const vf = new VideoFrame(cv, { timestamp: Math.round((i / FPS) * 1e6), duration: Math.round((1 / FPS) * 1e6) });
+          vEnc.encode(vf, { keyFrame: i % FPS === 0 });
+          vf.close();
+          if (vEnc.encodeQueueSize > 4) {
+            await new Promise(r => vEnc.addEventListener('dequeue', r, { once: true }));
+          }
+          if (i % 15 === 0) {
+            st.textContent = 'Mengekspor MP4 (1080×1920 30 FPS · FastStart & Seekable): ' + Math.round((i / totalFrames) * 100) + '%…';
+            await new Promise(r => setTimeout(r, 0));
+          }
+        }
+        await vEnc.flush();
+        vEnc.close();
+        muxer.finalize();
+        renderMaster(off);
+        const patched = patchMp4Duration(target.buffer, exactDur);
+        const a = dl(new Blob([patched], { type: 'video/mp4' }), 'kubernetes-part-7-full.mp4');
+        st.innerHTML = 'Selesai (MP4 1080×1920 30 FPS · Durasi ' + fmt(exactDur) + ' · Seekable). <a href="' + a.href + '" download="kubernetes-part-7-full.mp4">Klik di sini jika belum terunduh</a>.';
+        exporting = false;
+        $('ex').disabled = false;
+        return;
       }
-      vs.close();
-      st.textContent = 'Menyusun tabel indeks durasi & seekbar MP4 (moov fastStart)…';
-      await new Promise(r => setTimeout(r, 0));
-      await out.finalize();
-      renderMaster(off);
-      const a = dl(new Blob([out.target.buffer], { type: 'video/mp4' }), 'kubernetes-part-7-full.mp4');
-      st.innerHTML = 'Selesai (MP4 1080×1920 30 FPS · Durasi ' + fmt(exactDur) + ' · Seekable). <a href="' + a.href + '" download="kubernetes-part-7-full.mp4">Klik di sini jika belum terunduh</a>.';
-      exporting = false;
-      $('ex').disabled = false;
-      return;
     } catch (err) {
-      console.warn('Mediabunny fallback to MediaRecorder:', err);
+      console.warn('WebCodecs MP4 export fallback to MediaRecorder:', err);
       exporting = false;
       $('ex').disabled = false;
     }
@@ -4257,22 +4430,30 @@ $('ex').onclick = async () => {
   rec.onstop = async () => {
     const ext = mt.startsWith('video/mp4') ? 'mp4' : 'webm';
     let finalBlob = new Blob(chunks, { type: mt.split(';')[0] });
-    if (M && M.Input && M.Conversion && M.BlobSource) {
+    const M2 = await ensureMediabunny();
+    if (M2 && M2.Input && M2.Conversion && M2.BlobSource) {
       try {
         st.textContent = 'Menyusun metadata durasi & indeks seekbar video…';
-        const inp = new M.Input({ source: new M.BlobSource(finalBlob), formats: M.ALL_FORMATS });
-        const out = new M.Output({
-          format: ext === 'mp4' ? new M.Mp4OutputFormat({ fastStart: 'in-memory' }) : new M.WebMOutputFormat(),
-          target: new M.BufferTarget()
+        const inp = new M2.Input({ source: new M2.BlobSource(finalBlob), formats: M2.ALL_FORMATS });
+        const out = new M2.Output({
+          format: ext === 'mp4' ? new M2.Mp4OutputFormat({ fastStart: 'in-memory' }) : new M2.WebMOutputFormat(),
+          target: new M2.BufferTarget()
         });
-        const conv = await M.Conversion.init({ input: inp, output: out });
+        const conv = await M2.Conversion.init({ input: inp, output: out });
         if (conv.isValid) {
           await conv.execute();
-          finalBlob = new Blob([out.target.buffer], { type: ext === 'mp4' ? 'video/mp4' : 'video/webm' });
+          const buf = ext === 'mp4' ? patchMp4Duration(out.target.buffer, TOTAL_DUR) : out.target.buffer;
+          finalBlob = new Blob([buf], { type: ext === 'mp4' ? 'video/mp4' : 'video/webm' });
         }
       } catch (e) {
         console.warn('Remux fallback skipped:', e);
       }
+    }
+    if (ext === 'mp4') {
+      try {
+        const ab = await finalBlob.arrayBuffer();
+        finalBlob = new Blob([patchMp4Duration(ab, TOTAL_DUR)], { type: 'video/mp4' });
+      } catch (e) {}
     }
     const a = dl(finalBlob, 'kubernetes-part-7-full.' + ext);
     st.innerHTML = 'Selesai (' + ext.toUpperCase() + ' · Durasi ' + fmt(TOTAL_DUR) + ' · Seekable). <a href="' + a.href + '" download="kubernetes-part-7-full.' + ext + '">Klik di sini</a>.';
